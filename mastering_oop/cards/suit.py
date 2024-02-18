@@ -4,6 +4,7 @@ from enum import Enum
 #   - number of attributes must be finite
 #   - attributes can be used as objects
 
+
 class Suit(str, Enum):
     Club = "♣"
     Diamond = "♦"
@@ -11,7 +12,7 @@ class Suit(str, Enum):
     Spade = "♠"
 
 
-'''print("############### Try Out ###############")
+"""print("############### Try Out ###############")
 print(Suit.Club)
 print(Suit.Heart.value)
 
@@ -39,4 +40,4 @@ except AttributeError as e:
     print(e)
 
 # class is iterable:
-print(hasattr(Suit, "__iter__"))'''
+print(hasattr(Suit, "__iter__"))"""

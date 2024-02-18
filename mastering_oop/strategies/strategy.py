@@ -1,9 +1,12 @@
 import abc
 from abc import abstractmethod
 
+from mastering_oop.hands.hand import Hand
+
 # these classes often follow the strategy dessign pattern, meaning:
 # data is provided as method arguments and the classes store
 # very little data themselves, sometimes they are even stateless
+
 
 class GameStrategy:
 
@@ -30,6 +33,7 @@ class BettingStrategy:
 
     def record_loss(self) -> None:
         pass
+
 
 class BettingStrategy2(metaclass=abc.ABCMeta):
 

@@ -1,4 +1,6 @@
 mastering_oop.egg-info
+mastering_oop/__pycache__
 
 mastering_oop/hands/__pycache__
 mastering_oop/cards/__pycache__
+mastering_oop/strategies/__pycache__

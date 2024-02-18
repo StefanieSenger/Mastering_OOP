@@ -6,10 +6,11 @@ from mastering_oop.cards.suit import Suit
 #   - the rank() method updates the constructor of the Card/AceCard/FaceCard class to match the correct rank
 #   - the suit() method adds the correct suit to the constructor and creates the object
 
+
 class CardFactory:
 
     def rank(self, rank: int) -> "CardFactory":
-        '''updates the state of the constructor'''
+        """updates the state of the constructor"""
 
         self.class_, self.rank_str = {
             1: (AceCard, "A"),
@@ -21,12 +22,12 @@ class CardFactory:
         return self
 
     def suit(self, suit: Suit) -> Card:
-        '''creates final Card object'''
+        """creates final Card object"""
 
         return self.class_(self.rank_str, suit)
 
 
-'''print("############### Try Out ###############")
+"""print("############### Try Out ###############")
 
 factory = CardFactory()
 card1 = factory.rank(2).suit(Suit.Heart)
@@ -36,4 +37,4 @@ print(card1.__dict__)
 
 deck = [factory.rank(r + 1).suit(s) for r in range(13) for s in Suit]
 print(len(deck))
-'''
+"""

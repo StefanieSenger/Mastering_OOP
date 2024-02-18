@@ -3,6 +3,7 @@ from mastering_oop.cards.suit import Suit
 # each subclass defines their own __init__ and refers their attributes to the
 # superclasses's __init__ in a unique way
 
+
 class Card:
 
     def __init__(self, rank: str, suit: Suit, hard: int, soft: int) -> None:

@@ -1,11 +1,13 @@
 from mastering_oop.cards.deck import DeckExtended
 from mastering_oop.hands.hand import Hand
+from mastering_oop.strategies.strategy import BettingStrategy, GameStrategy
+
 
 class Table:
-    '''tracks the state of the game'''
+    """tracks the state of the game"""
 
-    def __init__(self) -> None:
-        self.deck = DeckExtended(func=make_cards_with_factory_function)
+    def __init__(self, func) -> None:
+        self.deck = DeckExtended(func=func)
 
     def place_bet(self, amount: int) -> None:
         print("Bet", amount)
