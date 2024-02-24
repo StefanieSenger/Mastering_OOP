@@ -1,6 +1,8 @@
 import sys
 
-from typing import Tuple, Any
+from typing import Tuple, Any, NamedTuple
+
+from mastering_oop.cards.suit import Suit
 
 # polymorphic design:
 #   - subclasses share __init__ with superclass
@@ -113,6 +115,18 @@ class CardWithComparisons(Card):
         if not isinstance(other, CardWithComparisons):
             return NotImplemented
         return self.rank != other.rank or self.suit != other.suit
+
+
+class AceCardUnmutable(NamedTuple):
+    """Class's __setattr__ method prevents attribues from being set."""
+
+    rank: str  # rank attrubute doesn't hold a value: need to be specified in object initiation
+    suit: Suit  ## suit attrubute doesn't hold a value: need to be specified in object initiation
+    hard: int = 1
+    soft: int = 11
+
+    def __str__(self) -> str:
+        return f"{self.rank}{self.suit}"
 
 
 """print("############### Try Out ###############")

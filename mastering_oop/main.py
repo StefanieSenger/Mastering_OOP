@@ -1,4 +1,5 @@
-from typing import cast, Iterable, Iterator
+from typing import cast, Iterable, Iterator, Optional, Any
+from dataclasses import dataclass, FrozenInstanceError
 
 from mastering_oop.cards.card_polymorphic import (
     Card,
@@ -7,10 +8,17 @@ from mastering_oop.cards.card_polymorphic import (
     AceCardHashed,
     CardWithBytes,
     CardWithComparisons,
+    AceCardUnmutable,
 )
 from mastering_oop.cards.suit import Suit
 from mastering_oop.cards.deck import DeckWrapped, DeckExtended, DeckDesigned
-from mastering_oop.hands.hand import Hand, HandWithSurrogateConstructor, FrozenHand
+from mastering_oop.hands.hand import (
+    Hand,
+    HandWithSurrogateConstructor,
+    FrozenHand,
+    HandLazyProperty,
+    HandEagerProperty,
+)
 from mastering_oop.strategies.strategy import Flat, GameStrategy
 from mastering_oop.strategies.player import Player
 from mastering_oop.strategies.table import Table
@@ -306,9 +314,8 @@ except TypeError as e:
         e
     )  # this does not work, since float.__init__() doesn't take  any arguments other then `self`: it's not mutable
 
-# overriding __new__ classmethod, to make __init__ possible:
 
-
+# overwriting __new__ classmethod, to make __init__ possible:
 class Float_Units(float):
 
     def __new__(cls, value, unit):  # it also makes us a custom __init__() it seems
@@ -319,3 +326,171 @@ class Float_Units(float):
 
 speed = Float_Units(6.8, "knots")
 print(speed * 2)
+
+
+deck = DeckExtended(func=make_cards_with_factory_function)
+cards = [deck.pop(), deck.pop(), deck.pop()]
+
+# testing lazy property handling by HandLazyProperty()
+hand = HandLazyProperty(Card(10, Suit.Spade), *cards)
+print(
+    hand.total
+)  # total is a method, but appears like a property; recalculated every time, but only uppon request
+
+hand.card = (
+    deck.pop()
+)  # card can be updatet as is it was an attribute, but in fact the card() method is run
+print(hand.total)
+
+print(hand.card)  # see property
+
+# testing eager property with HandEagerProperty()
+hand = HandEagerProperty(Card(10, Suit.Spade), *cards)
+print(
+    hand.total
+)  # total is a method, but appears like a property; recalculated every time, but only uppon request
+
+deck = DeckExtended(func=make_cards_with_factory_function)
+hand.card = (
+    deck.pop()
+)  # card can be updatet as is it was an attribute, but in fact the card() method is run
+print(hand.total)
+
+print(hand.card)  # see property
+
+
+# test HandEagerProperty.split()
+# we can only split if the two cards are of equal rank
+hand_to_split = HandEagerProperty(
+    Card(10, Suit.Spade), *(Card(2, Suit.Spade), Card(2, Suit.Club))
+)
+
+new_hand = hand_to_split.split(deck)
+print(f"new_hand: {new_hand}")
+print(f"old hand: {hand_to_split}")
+
+
+# test AceCardUnmutable() for mutability
+unmutable_card = AceCardUnmutable(suit=Suit.Club, rank=11)
+print(unmutable_card.suit)  # we can get an attribute
+print(unmutable_card.rank)
+
+# but we cannot set an attribute
+try:
+    unmutable_card.hard = 12
+except AttributeError as e:
+    print(e)
+
+# and we cannot create any new attribute
+try:
+    unmutable_card.new_attribute = "This is an ambiguous card."
+except AttributeError as e:
+    print(e)
+
+
+# dataclass provides __post_init__ method
+@dataclass
+class RateTimeDistance:
+    """Computes any of three values, when the other two are given.
+    Internally __getattr__ is being called whenever the computed attribute does not exist.
+    """
+
+    rate: Optional[float] = None
+    time: Optional[float] = None
+    distance: Optional[float] = None
+
+    def __post_init__(self) -> None:
+        """Calculates values immediately after __init__ is run, similar to a @property decorated attribute."""
+        if self.rate is not None and self.time is not None:
+            self.distance = self.rate * self.time
+        elif self.rate is not None and self.distance is not None:
+            self.time = self.distance / self.rate
+        elif self.time is not None and self.distance is not None:
+            self.rate = self.distance / self.time
+
+
+very_smart_calculator = RateTimeDistance(distance=1000, time=10)
+print(very_smart_calculator)
+very_smart_calculator.distance = 3.14
+print(very_smart_calculator)  # not so smart output
+
+
+# we can freeze this class, so it behaves like a NamedTuple (immutable)
+@dataclass(frozen=True)
+class FrozenRateTimeDistance:
+    """Computes any of three values, when the other two are given and provides immutable data."""
+
+    rate: Optional[float] = None
+    time: Optional[float] = None
+    distance: Optional[float] = None
+
+    def __post_init__(self) -> None:
+        """Calculates values immediately after __init__ is run, similar to a @property decorated attribute."""
+        if self.rate is not None and self.time is not None:
+            # self.distance = self.rate * self.time # can't be set directly with frozen=True
+            object.__setattr__(self, "distance", self.rate * self.time)
+        elif self.rate is not None and self.distance is not None:
+            # self.time = self.distance / self.rate # can't be set directly with frozen=True
+            object.__setattr__(self, "time", self.distance / self.rate)
+        elif self.time is not None and self.distance is not None:
+            # self.rate = self.distance / self.time # can't be set directly with frozen=True
+            object.__setattr__(self, "rate", self.distance / self.time)
+
+
+very_smart_calculator = FrozenRateTimeDistance(time=1, rate=0)
+print(very_smart_calculator)
+try:
+    very_smart_calculator.distance = 100
+except FrozenInstanceError as e:
+    print(e)  # smarter output: the usual __setattr__() method raises an Error
+
+
+# __getattribute__()
+class SuperSecret:
+    """Prevents access to attributes starting with an underscore."""
+
+    def __init__(self, hidden: Any, exposed: Any) -> None:
+        self._hidden = hidden
+        self.exposed = exposed
+
+    def some_custom_method():
+        pass
+
+    def __getattribute__(self, item: str):
+        """overwritten, so that not any attribute from __dict__ is returned, but the
+        ones starting with a single `_` are excluded."""
+        if len(item) >= 2 and item[0] == "_" and item[1] != "_":
+            raise AttributeError(item)
+        return super().__getattribute__(item)
+
+
+secret = SuperSecret(hidden="password", exposed="user_name")
+try:
+    secret._hidden
+except AttributeError as e:
+    print(f"AttributeError: {e}")  # not very verbose, but maybe enough
+
+# __dir__() and __dict__ will still reveal the existence of `_hidden`, since here they come with their default implementation
+print(secret.__dir__())
+print(secret.__dict__)
+
+
+@dataclass
+class RTD:
+    rate: Optional[float]
+    time: Optional[float]
+    distance: Optional[float]
+
+    def compute(self) -> "RTD":
+        if self.distance is None and self.rate is not None and self.time is not None:
+            self.distance = self.rate * self.time
+        elif self.rate is None and self.distance is not None and self.time is not None:
+            self.rate = self.distance / self.time
+        elif self.time is None and self.distance is not None and self.rate is not None:
+            self.time = self.distance / self.rate
+        return self
+
+
+r = RTD(distance=13.5, rate=6.1, time=None)
+print(r.compute())
+print(dir(r))

@@ -31,10 +31,10 @@ class SomeApplicationClass(Logged):
         self.logger.info("product=%r", self.v3)
 
 
-print("############### Try Out ###############")
+"""print("############### Try Out ###############")
 print(type(LoggedMeta))  # of type `type`
 print(type(Logged))  # of type `LoggedMeta`
 print(type(SomeApplicationClass))  # of type `LoggedMeta`
 
 app = SomeApplicationClass(1, 2)
-app.logger.info("This can now be logged: {self.v3}")
+app.logger.info("This can now be logged: {self.v3}")"""
