@@ -1,4 +1,6 @@
 import random
+from typing import Optional, Type
+from types import TracebackType
 
 from mastering_oop.cards.card_polymorphic import Card, AceCard, FaceCard
 from mastering_oop.cards.suit import Suit
@@ -6,7 +8,7 @@ from mastering_oop.cards.suit import Suit
 # three ways to create a container class:
 #   - wrap: surround an existing collection class (e.i. list); example of Facade design pattern
 #   - extend: add functionality to existing collection class
-#   - self design: muild new collection class from scratch
+#   - self design: build new collection class from scratch
 
 
 class DeckWrapped:
@@ -43,3 +45,36 @@ class DeckDesigned(list):
         burn = random.randint(1, 52)
         for i in range(burn):
             self.pop()
+
+
+# context manager
+class DeterministicDeck:
+    """Deck class with a random seed; can be used for testing and debugging.
+    It's also a factory, as it creates a DeckExtended object each time it is run."""
+
+    def __init__(self, *args, **kw) -> None:
+        self.args = args
+        self.kw = kw
+
+    def __enter__(self) -> DeckExtended:
+        self.was = random.getstate()
+        random.seed(0, version=1) # change global configuration of random seed
+        return DeckExtended(*self.args, **self.kw) # instantiate DeckExtended object
+
+    def __exit__(
+            self,
+            exc_type: Optional[Type[BaseException]],
+            exc_value: Optional[BaseException],
+            traceback: Optional[TracebackType]
+    ) -> Optional[bool]:
+        random.setstate(self.was) # reset global configuration of random seed
+        return False
+
+
+'''print("############### Try Out ###############")
+# get hand from DeterministicDeck context manager
+with DeterministicDeck(func=make_cards_with_factory_function) as deck:
+    hand = [deck.pop(), deck.pop()] # deck with a random seed is used to make a hand
+
+hand = [deck.pop(), deck.pop()]
+print(hand) # it's always the same cards that a drawn first'''

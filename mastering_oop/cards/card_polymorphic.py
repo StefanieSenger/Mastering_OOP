@@ -118,10 +118,10 @@ class CardWithComparisons(Card):
 
 
 class AceCardUnmutable(NamedTuple):
-    """Class's __setattr__ method prevents attribues from being set."""
+    """Class's __setattr__ method prevents attributes from being set."""
 
-    rank: str  # rank attrubute doesn't hold a value: need to be specified in object initiation
-    suit: Suit  ## suit attrubute doesn't hold a value: need to be specified in object initiation
+    rank: str  # rank attribute doesn't hold a value: need to be specified in object initiation
+    suit: Suit  # suit attribute doesn't hold a value: need to be specified in object initiation
     hard: int = 1
     soft: int = 11
 

@@ -1,5 +1,7 @@
-from typing import cast, Iterable, Iterator, Optional, Any
+from typing import cast, Iterable, Iterator, Optional, Any, Type
+from types import TracebackType
 from dataclasses import dataclass, FrozenInstanceError
+import random
 
 from mastering_oop.cards.card_polymorphic import (
     Card,
@@ -11,7 +13,7 @@ from mastering_oop.cards.card_polymorphic import (
     AceCardUnmutable,
 )
 from mastering_oop.cards.suit import Suit
-from mastering_oop.cards.deck import DeckWrapped, DeckExtended, DeckDesigned
+from mastering_oop.cards.deck import DeckWrapped, DeckExtended, DeckDesigned, DeterministicDeck
 from mastering_oop.hands.hand import (
     Hand,
     HandWithSurrogateConstructor,
@@ -494,3 +496,95 @@ class RTD:
 r = RTD(distance=13.5, rate=6.1, time=None)
 print(r.compute())
 print(dir(r))
+
+
+# implementation of a callable class
+class Power():
+
+    def __call__(self, x: int, n: int) -> int:
+        p = 1
+        for i in range(n):
+            p *= x
+        return p
+
+power = Power()
+print(power(2, 3))
+
+
+# or by inheritance
+from collections.abc import Callable
+class Power(Callable):
+
+    def __call__(self, x: int, n: int) -> int:
+        """implementing this is still expected (will raise a specific error message if we forget)"""
+        p = 1
+        for i in range(n):
+            p *= x
+        return p
+
+power = Power()
+print(power(2, 3))
+
+
+# optimized power callable with an algorithm (O(log_2_n)) and a cache for memoization
+class OptimizedPower:
+
+    def __init__(self) -> None:
+        self.memo: Dict[int, int] = {}
+
+    def __call__(self, x: int, n: int) -> int:
+        if (x, n) not in self.memo:
+            if n == 0:
+                self.memo[x, n] = 1
+            elif n % 2 == 1:
+                self.memo[x, n] = self.__call__(x, n - 1) * x
+            elif n % 2 == 0:
+                t = self.__call__(x, n // 2)
+                self.memo[x, n] = t * t
+            else:
+                raise Exception("Logic Error")
+        return self.memo[x, n]
+
+power = OptimizedPower()
+print(power(2, 134))
+print(power.memo)
+
+
+# context manager with global change to random number generator
+class KnownSequence:
+    """context manager that changes the global seed of random"""
+
+    def __init__(self, seed: int = 0) -> None:
+        self.seed = seed
+
+    def __enter__(self) -> 'KnownSequence':
+        self.was = random.getstate() # saves previous state of random
+        random.seed(self.seed, version=1) # changes state of random to new value
+        return self # returning self is common for mixin context managers
+
+    def __exit__(
+            self,
+            exc_type: Optional[Type[BaseException]], # exceptions that raise are passed into __exit__
+            exc_value: Optional[BaseException],
+            traceback: Optional[TracebackType]
+    ) -> Optional[bool]:
+        random.setstate(self.was) # sets state of random back to previous state
+
+        # if we return False or any object with `bool(obj)==False`, then the exceptions will raise if they exist;
+        # returning True or alike will silence the exceptions
+        return False
+
+print(f"random numbers without seed: {tuple(random.randint(0, 10) for i in range(10))}") # differs
+
+with KnownSequence() as fixed_random_state:
+    #print(fixed_random_state.seed)
+    #print(fixed_random_state.was)
+    print(f"random numbers fixed seed: {tuple(random.randint(0, 10) for i in range(10))}") # always the same
+
+
+# get hand from DeterministicDeck context manager
+with DeterministicDeck(func=make_cards_with_factory_function) as deck:
+    hand = [deck.pop(), deck.pop()] # deck with a random seed is used to make a hand
+
+hand = [deck.pop(), deck.pop()]
+print(hand) # it's always the same cards that a drawn first

@@ -3,7 +3,7 @@ from abc import abstractmethod
 
 from mastering_oop.hands.hand import Hand
 
-# these classes often follow the strategy dessign pattern, meaning:
+# these classes often follow the strategy design pattern, meaning:
 # data is provided as method arguments and the classes store
 # very little data themselves, sometimes they are even stateless
 
@@ -52,3 +52,5 @@ class Flat(BettingStrategy):
 
     def bet(self) -> int:
         return 1
+
+print("############### Try Out ###############")
