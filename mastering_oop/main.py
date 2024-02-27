@@ -1,7 +1,8 @@
-from typing import cast, Iterable, Iterator, Optional, Any, Type
+from typing import cast, Iterable, Iterator, Optional, Any, Type, DefaultDict, List, Tuple, Dict
 from types import TracebackType
 from dataclasses import dataclass, FrozenInstanceError
 import random
+from collections import Counter
 
 from mastering_oop.cards.card_polymorphic import (
     Card,
@@ -20,6 +21,7 @@ from mastering_oop.hands.hand import (
     FrozenHand,
     HandLazyProperty,
     HandEagerProperty,
+    HandWithContains,
 )
 from mastering_oop.strategies.strategy import Flat, GameStrategy
 from mastering_oop.strategies.player import Player
@@ -341,7 +343,7 @@ print(
 
 hand.card = (
     deck.pop()
-)  # card can be updatet as is it was an attribute, but in fact the card() method is run
+)  # card can be updated as is it was an attribute, but in fact the card() method is run
 print(hand.total)
 
 print(hand.card)  # see property
@@ -350,12 +352,12 @@ print(hand.card)  # see property
 hand = HandEagerProperty(Card(10, Suit.Spade), *cards)
 print(
     hand.total
-)  # total is a method, but appears like a property; recalculated every time, but only uppon request
+)  # total is a method, but appears like a property; recalculated every time, but only upon request
 
 deck = DeckExtended(func=make_cards_with_factory_function)
 hand.card = (
     deck.pop()
-)  # card can be updatet as is it was an attribute, but in fact the card() method is run
+)  # card can be updated as is it was an attribute, but in fact the card() method is run
 print(hand.total)
 
 print(hand.card)  # see property
@@ -586,5 +588,79 @@ with KnownSequence() as fixed_random_state:
 with DeterministicDeck(func=make_cards_with_factory_function) as deck:
     hand = [deck.pop(), deck.pop()] # deck with a random seed is used to make a hand
 
-hand = [deck.pop(), deck.pop()]
+hand = Hand(deck.pop(), deck.pop(), deck.pop())
 print(hand) # it's always the same cards that a drawn first
+
+
+# the Hand class uses a list for the cards attribute and we can iterate through the list to find an Ace:
+deck = DeckExtended(func=make_cards_with_factory_function)
+hand = Hand(deck.pop(), deck.pop(), deck.pop())
+print(type(hand))
+print(hand.cards)
+
+# we can search the list serially:
+print(any(card.rank == "A" for card in hand.cards))
+
+# this also works, because Hand.cards implements `__contains__`
+print("A" in hand.cards)
+print(dir(hand.cards))
+print("__contains__" in dir(hand.cards)) # <--- this!
+
+# this does not work, because the Hand() object itself does not implement `__contains__`
+try:
+    print("A" in hand)
+except TypeError as e:
+    print(e)
+
+# this works, because HandWithContains implements `__contains__`
+hand = HandWithContains(deck.pop(), deck.pop(), deck.pop())
+print(hand.cards)
+print("A" in hand)
+
+
+# using DefaultDict for making keys
+def dice_examples(n: int=12, seed: Any=None) -> DefaultDict[int, List]:
+    """generates examples of dice rolls and accumulates them into a dictionary where the
+    keys represent the possible outcomes of rolling two six-sided dice, the values are
+    lists of tuples representing individual dice rolls."""
+    if seed:
+        random.seed(seed)
+    Roll = Tuple[int, int]
+    outcomes: DefaultDict[int, List[Roll]] = defaultdict(list) # defaultdict with empty list as a default for any key (existing or not)
+    for _ in range(n):
+        d1, d2 = random.randint(1, 6), random.randint(1, 6)
+        # `outcomes` is a DefaultDict with the key d1+d2 and the values being a list of tuples containing d1 and d2
+        outcomes[d1+d2].append((d1, d2)) # if the key already exists, value tuple is simply appended
+    return outcomes
+
+print(dice_examples())
+print(dice_examples()[10])
+print(dice_examples()['bla']) # defaults to an empty list
+
+
+# try the same thing with a usual dict
+def dice_examples(n: int=12, seed: Any=None) -> Dict:
+    if seed:
+        random.seed(seed)
+    Roll = Tuple[int, int]
+    outcomes: dict[int, List[Roll]] = dict()
+    for _ in range(n):
+        d1, d2 = random.randint(1, 6), random.randint(1, 6)
+        outcomes[d1+d2].append((d1, d2)) # <-- KeyError here, because this key is not existing in the dict
+    return outcomes
+
+try:
+    print(dice_examples())
+except KeyError as e:
+    print(f"KeyError: {e}")
+
+
+# playing with Counter() objects
+counter1 = Counter("hsejvoelejajaja")
+print(f"counter1: {counter1}")
+counter2 = Counter("wwhjnxnalaaadfffcdvevbjejvbe")
+print(f"counter2: {counter2}")
+
+# we can compute union and intersection:
+print(counter1+counter2)
+print(counter1-counter2)

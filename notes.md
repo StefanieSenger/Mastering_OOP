@@ -1,4 +1,9 @@
-## Special methods and how they are triggered
+## Special methods
+
+This table tries to define special methods by answering the following questions:
+- what base classes have this method implemented and what is the default implementation
+- when is the special method triggered
+- what is it useful for
 
 ```python
 class Class:
@@ -10,13 +15,11 @@ obj = Class()
 
 ```__init__``` - ```obj = Class(*args, **kwargs)```, init attributes can be type checked by mypy
 
-```__getitem__``` - ```obj[index]```
-
 ```__bool__``` - ```if obj```
 
 ```__format__``` - ```f"{obj}", format(obj), {0}.format(obj)```
 
-```__hash__``` - ```hash(obj)```, integer representation of object, either for faster search in collections or for cryptography; objects need a hash in order to be keys in a dict; default hash values compute directly from the id numbers, using modulo depending on architecture (they repeat); default hash values only exist, unless a ```__eq__``` is created, then the object becomes unhashable, until a ```__hash__``` is implemented as well
+```__hash__``` - ```hash(obj)```, integer representation of object, either for faster search in collections (searching otherwise has quite a bad time complexity) or for cryptography; makes the object immutable, objects need a hash in order to be keys in a dict or elements in a set; default hash values compute directly from the id numbers, using modulo depending on architecture (they repeat); default hash values only exist, unless a ```__eq__``` is created, then the object becomes unhashable, until ```__hash__``` inherited from the `object` class is overwritten; set types use hash tables to perform adding or removing an element in  $O(1)$ compared to $O(n)$ in lists types, mappings also use hashing
 
 ```__eq__``` - ```obj is other_obj```, default compares ids, set together with ```__hash__``` (include same attributes)
 
@@ -48,6 +51,19 @@ obj = Class()
 
 ```__exit__``` - used in context managers to restore the previous state; takes `(self, exc_type, exc_value, traceback)` as arguments; all exceptions raised in `__enter__` are directed towards `__exit__` and can be raised here, depending whether `__exit__` returns `True` or `False`; if it returns `False` or any object with `bool(obj)==False`, then the exceptions will possibly raise; returning `True` or alike will silence the exceptions (for instance when they are already handled in the `__exit__` block)
 
+```__contains__``` - `a in obj`, implements `in` operator in collections
+
+```__iter__``` - `for i in obj` or `iter(obj)`, iteration in collection classes; can return an Iterator object or be a generator function
+
+```__len__``` - `len(obj)`, for collection classes
+
+```__getitem__``` - ```obj[index]```, uses slicing to get member of a `Sequence` type, $O(1)$
+
+```__setitem__``` - ```obj[index] = value```, uses slicing to set member of a `MutableSequence` type, $O(1)$
+
+```__delitem__``` - ```del obj[index]```, uses slicing to delete member of a `MutableSequence` type, $O(1)$
+
+
 
 ## More general info
 With setting and getting attributes, we cannot call the same method from within, as this would cause an infinite recursion. As a workaround, we can use a super-class' getting or setting methods.
@@ -69,3 +85,32 @@ An instance of a descriptor class is a class attribute in an owner class. The de
 ```Descriptor.__delete__(self, instance)``` - for deleting the attribute's value
 
 A non-data descriptor only implements `__get__`, a data descriptor implements `__get__` and `__set__` and maybe `__delete__`.
+
+
+## Build-in classes and creating custom classes
+- can be found in the `typing` module or in the several `abc` modules of the different build-in class types (for instance `collections.abc`) or in other places
+- the `abc`'s source code also shows what methods need to be implemented, as does the documentation, see: [Collections Abstract Base Classes](https://docs.python.org/3.12/library/collections.abc.html#collections-abstract-base-classes)
+- when we build new classes, we need to know what methods come inherited with creating the class (those might have to be overwritten), and what methods we need to add, so that the required behaviour integrates nicely into the rest of the programme, for instance, when we want to build our own `MutableSequence` class (`list` also is one), then we need to implement or overwrite all its methods
+- there are three ways to make up our own class:
+  - extend: add functionality to existing collection class: `class NewClass(list)`
+    - re-use or overwrite existing methods
+  - wrap: surround an existing collection class: `class NewClass: #some method uses a list`
+    - some methods will have to be delegated to the underlying container
+  - self design: build new class from scratch
+
+
+`deque` - double ended queue; in distinction with a list, it does not provide uniform performance for any element, but favours performance in the beginning and in the end of the collection; has a `pop()` method that is very efficient
+
+`stack` - single ended queue (not sure if this is build into Python in fact)
+
+`ChainMap` - chain of mappings; uses Python's principle to look for local keys first, then global ones
+
+`defaultdict` - dict subclass that provides a factory method to create/calculate missing keys; unlike an ordinary dict, doesn't raise an exception for missing keys, but inserts a default value for any new key we give it, for instance `defaultdict(list)` will create an empty list by default for any key, that we request using `defaultdict(list)["nonexisting_key"]`; commonly used to create indices for objects
+
+`Counter` - dict subclass used for counting objects; represents multiple occurrences of a value with an integer count; relies on the data structure `bag` (also called `multiset`); used as a frequency table; also implements set-like comparison operators like union or intersection
+
+`NamedTuple` - tuple subclass with named attributes that contain immutable objects; expects a number of class level attributes (typically with type hints); it has a `__setattr__` method that prevents attributes from being set; a subclass can't add any new attributes, but it can add methods (not so sure how it differs with `Enum`)
+
+`Enum` - used to build a unique set of constant values; values can be iterated over and compared for equality; useful working with a fixed set of choices; expects a number of class level attributes (not so sure how it differs with `NamedTuple`)
+
+`OrderedDict` - mapping that keeps the original key order (all dicts do that, since Python 3.7, so this class now is redundant)

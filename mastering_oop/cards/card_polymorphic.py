@@ -129,6 +129,21 @@ class AceCardUnmutable(NamedTuple):
         return f"{self.rank}{self.suit}"
 
 
+class BlackjackCard_T(NamedTuple):
+    rank: str
+    suit: Suit
+    hard: int
+    soft: int
+
+    def is_ace(self) -> bool:
+        return False
+
+class AceCard_T(BlackjackCard_T):
+    """as a subclass of a NamedTuple cannot add new attributes, but it can overwrite methods"""
+
+    def is_ace(self) -> bool:
+        return True
+
 """print("############### Try Out ###############")
 cards = [AceCard('A', '♠'), Card('2','♠'), FaceCard('J','♠'),]
 print(cards)"""

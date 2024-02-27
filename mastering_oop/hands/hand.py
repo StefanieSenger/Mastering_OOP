@@ -190,3 +190,12 @@ class HandEagerProperty(Hand):
         self.card = deck.pop()  # add new card to `self.cards` list
         h_new = self.__class__(self.dealer_card, c1, deck.pop())
         return h_new
+
+
+class HandWithContains(Hand):
+    """class that implements __contains__"""
+
+    def __contains__(self, other):
+        if other in (card.rank for card in self.cards):
+            return True
+        return False
