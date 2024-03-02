@@ -21,7 +21,7 @@ obj = Class()
 
 ```__hash__``` - ```hash(obj)```, integer representation of object, either for faster search in collections (searching otherwise has quite a bad time complexity) or for cryptography; makes the object immutable, objects need a hash in order to be keys in a dict or elements in a set; default hash values compute directly from the id numbers, using modulo depending on architecture (they repeat); default hash values only exist, unless a ```__eq__``` is created, then the object becomes unhashable, until ```__hash__``` inherited from the `object` class is overwritten; set types use hash tables to perform adding or removing an element in  $O(1)$ compared to $O(n)$ in lists types, mappings also use hashing
 
-```__eq__``` - ```obj is other_obj```, default compares ids, set together with ```__hash__``` (include same attributes)
+```__eq__``` - ```obj is other_obj```, default inherited from `object` compares ids, set together with ```__hash__``` (include same attributes); equality tests involving floats should never be written with `==` (because of imprecisions), but rather with `abs(a-b)/a <= eps`, with `eps` being a small value that we define
 
 ```__del__``` - cleanly disentangle object from memory resource; invoked on another thread at a time that is not easily to be predicted; executes automatically when reference count of CPython goes to 0, but due to circular references, it cannot always go back to 0
 
@@ -33,7 +33,7 @@ obj = Class()
 
 ```__setattr__``` - ```obj.attribute = "bla"```, by default simply create and set attributes; can have property-like behaviour, but is not as secure; when we are not able to set a new attribute or change an existing one, the object is immutable, we can make this happen by implementing a custom ```__setattr__``` (it is easier to extend to NamedTuple to archive this, though); custom implementation also used to detect changes in attribute values and to then derive a specific action whenever attributes are being set (for instance computing derived attributes); attention: we cannot re-set the same attribute within ``__setattr__``, except for as a ```super().__setattr__(value)``` argument because it would create an infinite recursion
 
-```__getattr__``` - triggered when ```obj.attribute``` does not exist, by default raises `AttributeError`; used as part of a larger process when the name of an attribute is unknown; can be overwritten with providing a meaningful result instead; common use for an attribute that doesn't compute it's values until they are needed
+```__getattr__``` - triggered when ```obj.attribute``` does not exist, by default raises `AttributeError`; used as part of a larger process when the name of an attribute is unknown; can be overwritten with providing a meaningful result instead; common use for an attribute that doesn't compute it's values until they are needed; setting and getting attributes, we cannot call the same method from within, as this would cause an infinite recursion; as a workaround, we can use a super-class' getting or setting methods
 
 ```__delattr__``` - deletes attribute from object
 
@@ -63,14 +63,9 @@ obj = Class()
 
 ```__delitem__``` - ```del obj[index]```, uses slicing to delete member of a `MutableSequence` type, $O(1)$
 
+```__add__``` and other operants - left hand side object's operant will by tried first, except if the right hand side object's class is a subclass of the left one: then the right hand side object's reflected operant will by tried first
 
-
-## More general info
-With setting and getting attributes, we cannot call the same method from within, as this would cause an infinite recursion. As a workaround, we can use a super-class' getting or setting methods.
-
-`@dataclass` class decorator: can be used to implement additional default methods, this class gets another parent than `type`, because it has a different `metaclass` (probably deriving from `type` but being able to do more). The default `@dataclass` implements `__eq__`, `__gt__`, etc. for instance. There are also more specifications available, for instance `@dataclass(frozen=True)` makes the class immutable.
-
-`abc`s (abstract base classes) fail to provide methods on purpose, so that the interpreter would raise, if inheriting classes don't implement them themselves. We have `abc`-decorators for classes intended to be collections in `collections`, but there are more `abc`-decorators, for instance in `numbers` for numeric types.
+```__rsub__``` - reflected subtraction: reverts the order of both objects; used if the left hand object doesn't implement the required special method (like ```__sub__``) or if the right hand object's class is a subclass of the left hand side's object
 
 
 ## Descriptors
@@ -88,7 +83,8 @@ A non-data descriptor only implements `__get__`, a data descriptor implements `_
 
 
 ## Build-in classes and creating custom classes
-- can be found in the `typing` module or in the several `abc` modules of the different build-in class types (for instance `collections.abc`) or in other places
+- classes to inherit from can be found in the `typing` module or in the several `abc` modules of the different build-in class types (for instance `collections.abc`) or in other places
+-`abc`s (abstract base classes) fail to provide methods on purpose, so that the interpreter would raise, if inheriting classes don't implement them themselves. We have `abc`-decorators for classes intended to be collections in `collections`, but there are more `abc`-decorators, for instance in `numbers` for numeric types.
 - the `abc`'s source code also shows what methods need to be implemented, as does the documentation, see: [Collections Abstract Base Classes](https://docs.python.org/3.12/library/collections.abc.html#collections-abstract-base-classes)
 - when we build new classes, we need to know what methods come inherited with creating the class (those might have to be overwritten), and what methods we need to add, so that the required behaviour integrates nicely into the rest of the programme, for instance, when we want to build our own `MutableSequence` class (`list` also is one), then we need to implement or overwrite all its methods
 - there are three ways to make up our own class:
@@ -114,3 +110,20 @@ A non-data descriptor only implements `__get__`, a data descriptor implements `_
 `Enum` - used to build a unique set of constant values; values can be iterated over and compared for equality; useful working with a fixed set of choices; expects a number of class level attributes (not so sure how it differs with `NamedTuple`)
 
 `OrderedDict` - mapping that keeps the original key order (all dicts do that, since Python 3.7, so this class now is redundant)
+
+
+## Python in-build decorators
+### class decorators
+- are used as an alternative to a mixin class
+- can implement both methods and attributes, but should be used for attributes only to avoid confusion (also, methods added by decorators cannot be overwritten or extended within the class or in a classes' subclass)
+- are applied to the class after the mro (method resolution order) has been done when building the class
+
+- `@dataclass`: can be used to implement additional default methods, this class gets another parent than `type`, because it has a different `metaclass` (probably deriving from `type` but being able to do more). The default `@dataclass` implements `__eq__`, `__gt__`, etc. for instance. There are also more specifications available, for instance `@dataclass(frozen=True)` makes the class immutable.
+- `@functools.total_ordering`: creates the missing comparison methods after only implementing two of them: `__eq__` and any method evaluating to <, >, <=, >=; the other methods will automatically be generated and will be available
+
+### method decorators
+- `@property`: transforms a method into a descriptor (changes the method into an attribute of the object); also creates `@{method_name}.setter` and `@{method_name}.deleter`
+
+- `@classmethod`: transforms a method into class-level function, that operates in the class space
+
+- `@staticmethod`: transforms a method into class-level function, that syntactically belongs to the class, but is in the global space

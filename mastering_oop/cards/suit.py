@@ -1,15 +1,33 @@
 from enum import Enum
+from typing import Type, List
 
 # using Enum class:
 #   - number of attributes must be finite
-#   - attributes can be used as objects
+#   - member names are Python identifiers
+#   - member values are Python objects
 
 
 class Suit(str, Enum):
+    """mixin class `str` is first here, so its methods can be overwritten by the Enum class if necessary"""
     Club = "♣"
     Diamond = "♦"
     Heart = "♥"
     Spade = "♠"
+
+
+class EnumDomain:
+    """mixin class that adds a domain() method"""
+    @classmethod
+    def domain(cls: Type) -> List[str]:
+        """lists all the values from the class"""
+        return [m.value for m in cls]
+
+
+class SuitD(str, EnumDomain, Enum):
+    Clubs = "♣"
+    Diamonds = "♦"
+    Hearts = "♥"
+    Spades = "♠"
 
 
 """print("############### Try Out ###############")
@@ -40,4 +58,9 @@ except AttributeError as e:
     print(e)
 
 # class is iterable:
-print(hasattr(Suit, "__iter__"))"""
+print(hasattr(Suit, "__iter__"))
+
+
+# mixins and multiple inheritance
+print(SuitD.__mro__)
+print(SuitD.domain())"""

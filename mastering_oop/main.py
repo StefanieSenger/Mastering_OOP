@@ -1,7 +1,9 @@
-from typing import cast, Iterable, Iterator, Optional, Any, Type, DefaultDict, List, Tuple, Dict
+from typing import cast, Iterable, Iterator, Optional, Any, Type, DefaultDict, List, Tuple, Dict, Union
 from types import TracebackType
 from dataclasses import dataclass, FrozenInstanceError
 import random
+import numbers
+import math
 from collections import Counter
 
 from mastering_oop.cards.card_polymorphic import (
@@ -664,3 +666,323 @@ print(f"counter2: {counter2}")
 # we can compute union and intersection:
 print(counter1+counter2)
 print(counter1-counter2)
+
+
+# tracing which numeric operants are used
+'''import sys
+
+def trace(frame, event, arg):
+    if frame.f_code.co_name.startswith("__"):
+        print(f"frame.f_code.co_name: {frame.f_code.co_name},\nframe.f_code.co_filename: {frame.f_code.co_filename},\nevent: {event}")
+
+sys.settrace(trace) # now everything we run passes through our trace function'''
+
+class NoisyFloat(float):
+
+    def __add__(self, other: float) -> 'NoisyFloat':
+        print(self, "+", other)
+        return NoisyFloat(super().__add__(other))
+
+    def __radd__(self, other: float) -> 'NoisyFloat':
+        print(self, "r+", other)
+        return NoisyFloat(super().__radd__(other))
+
+num1 = NoisyFloat(12)
+
+num1+0.3
+0.5+num1
+
+
+# defining our own number class
+class FixedPoint(numbers.Rational):
+    """class of scaled numbers, that contain an integer value and a scaling factor;
+    can be used for currency conversion;
+    we need to implement quite a few methods to satisfy the requirements of the abstract base class"""
+    __slots__ = ("value", "scale", "default_format")
+
+    def __init__(self, value: Union['FixedPoint', int, float], scale: int = 100) -> None:
+        self.value: int
+        self.scale: int
+        if isinstance(value, FixedPoint):
+            self.value = value.value
+            self.scale = value.scale
+        elif isinstance(value, int):
+            self.value = value
+            self.scale = scale
+        elif isinstance(value, float):
+            self.value = int(scale * value + .5)  # Round half up
+            self.scale = scale
+        else:
+            raise TypeError(f"Can't build FixedPoint from {value!r} of {type(value)}")
+        digits = int(math.log10(scale))
+        self.default_format = "{{0:.{digits}f}}".format(digits=digits)
+
+    def __str__(self) -> str:
+        return self.__format__(self.default_format)
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__:s}({self.value:d},scale={self.scale:d})"
+
+    def __format__(self, specification: str) -> str:
+        if specification == "":
+            specification = self.default_format
+        return specification.format(self.value / self.scale)  # no rounding
+
+    def numerator(self) -> int:
+        return self.value
+
+    def denominator(self) -> int:
+        return self.scale
+
+    def __add__(self, other: Union['FixedPoint', int]) -> 'FixedPoint':
+        if not isinstance(other, FixedPoint):
+            new_scale = self.scale
+            new_value = self.value + other * self.scale
+        else:
+            new_scale = max(self.scale, other.scale)
+            new_value = self.value * (new_scale // self.scale) + other.value * (
+                new_scale // other.scale
+            )
+        return FixedPoint(int(new_value), scale=new_scale)
+
+    def __sub__(self, other: Union['FixedPoint', int]) -> 'FixedPoint':
+        if not isinstance(other, FixedPoint):
+            new_scale = self.scale
+            new_value = self.value - other * self.scale
+        else:
+            new_scale = max(self.scale, other.scale)
+            new_value = self.value * (new_scale // self.scale) - other.value * (
+                new_scale // other.scale
+            )
+        return FixedPoint(int(new_value), scale=new_scale)
+
+    def __mul__(self, other: Union['FixedPoint', int]) -> 'FixedPoint':
+        if not isinstance(other, FixedPoint):
+            new_scale = self.scale
+            new_value = self.value * other
+        else:
+            new_scale = self.scale * other.scale
+            new_value = self.value * other.value
+        return FixedPoint(int(new_value), scale=new_scale)
+
+    def __truediv__(self, other: Union['FixedPoint', int]) -> 'FixedPoint':
+        if not isinstance(other, FixedPoint):
+            new_value = int(self.value / other)
+        else:
+            new_value = int(self.value / (other.value / other.scale))
+        return FixedPoint(new_value, scale=self.scale)
+
+    def __floordiv__(self, other: Union['FixedPoint', int]) -> 'FixedPoint':
+        if not isinstance(other, FixedPoint):
+            new_value = int(self.value // other)
+        else:
+            new_value = int(self.value // (other.value / other.scale))
+        return FixedPoint(new_value, scale=self.scale)
+
+    def __mod__(self, other: Union['FixedPoint', int]) -> 'FixedPoint':
+        if not isinstance(other, FixedPoint):
+            new_value = (self.value / self.scale) % other
+        else:
+            new_value = self.value % (other.value / other.scale)
+        return FixedPoint(new_value, scale=self.scale)
+
+    def __pow__(self, other: Union['FixedPoint', int]) -> 'FixedPoint':
+        if not isinstance(other, FixedPoint):
+            new_value = (self.value / self.scale) ** other
+        else:
+            new_value = (self.value / self.scale) ** (other.value / other.scale)
+        return FixedPoint(int(new_value) * self.scale, scale=self.scale)
+
+    def __abs__(self) -> 'FixedPoint':
+        return FixedPoint(abs(self.value), self.scale)
+
+    def __float__(self) -> float:
+        return self.value / self.scale
+
+    def __int__(self) -> int:
+        return int(self.value / self.scale)
+
+    def __trunc__(self) -> int:
+        return int(math.trunc(self.value / self.scale))
+
+    def __ceil__(self) -> int:
+        return int(math.ceil(self.value / self.scale))
+
+    def __floor__(self) -> int:
+        return int(math.floor(self.value / self.scale))
+
+    # reveal_type(numbers.Rational.__round__)
+
+    def __round__(self, ndigits: Optional[int] = 0) -> Any:
+        return FixedPoint(round(self.value / self.scale, ndigits=ndigits), self.scale)
+
+    def __neg__(self) -> 'FixedPoint':
+        return FixedPoint(-self.value, self.scale)
+
+    def __pos__(self) -> 'FixedPoint':
+        return self
+
+    def __radd__(self, other: Union['FixedPoint', int]) -> 'FixedPoint':
+        if not isinstance(other, FixedPoint):
+            new_scale = self.scale
+            new_value = other * self.scale + self.value
+        else:
+            new_scale = max(self.scale, other.scale)
+            new_value = other.value * (new_scale // other.scale) + self.value * (
+                new_scale // self.scale
+            )
+        return FixedPoint(int(new_value), scale=new_scale)
+
+    def __rsub__(self, other: Union['FixedPoint', int]) -> 'FixedPoint':
+        if not isinstance(other, FixedPoint):
+            new_scale = self.scale
+            new_value = other * self.scale - self.value
+        else:
+            new_scale = max(self.scale, other.scale)
+            new_value = other.value * (new_scale // other.scale) - self.value * (
+                new_scale // self.scale
+            )
+        return FixedPoint(int(new_value), scale=new_scale)
+
+    def __rmul__(self, other: Union['FixedPoint', int]) -> 'FixedPoint':
+        if not isinstance(other, FixedPoint):
+            new_scale = self.scale
+            new_value = other * self.value
+        else:
+            new_scale = self.scale * other.scale
+            new_value = other.value * self.value
+        return FixedPoint(int(new_value), scale=new_scale)
+
+    def __rtruediv__(self, other: Union['FixedPoint', int]) -> 'FixedPoint':
+        if not isinstance(other, FixedPoint):
+            new_value = self.scale * int(other / (self.value / self.scale))
+        else:
+            new_value = int((other.value / other.scale) / self.value)
+        return FixedPoint(new_value, scale=self.scale)
+
+    def __rfloordiv__(self, other: Union['FixedPoint', int]) -> 'FixedPoint':
+        if not isinstance(other, FixedPoint):
+            new_value = self.scale * int(other // (self.value / self.scale))
+        else:
+            new_value = int((other.value / other.scale) // self.value)
+        return FixedPoint(new_value, scale=self.scale)
+
+    def __rmod__(self, other: Union['FixedPoint', int]) -> 'FixedPoint':
+        if not isinstance(other, FixedPoint):
+            new_value = other % (self.value / self.scale)
+        else:
+            new_value = (other.value / other.scale) % (self.value / self.scale)
+        return FixedPoint(new_value, scale=self.scale)
+
+    def __rpow__(self, other: Union['FixedPoint', int]) -> 'FixedPoint':
+        if not isinstance(other, FixedPoint):
+            new_value = other ** (self.value / self.scale)
+        else:
+            new_value = (other.value / other.scale) ** self.value / self.scale
+        return FixedPoint(int(new_value) * self.scale, scale=self.scale)
+
+    def __eq__(self, other: Any) -> bool:
+        """equality tests involving floats should never be written with `==` (because of imprecisions),
+        but rather with `abs(a-b)/a <= eps`, with `eps` being a small value that we define here;
+        allowing Any type here is a requirement from the abstract method from the abstract superclass"""
+        if isinstance(other, FixedPoint):
+            if self.scale == other.scale:
+                return self.value == other.value
+            else:
+                return self.value * other.scale // self.scale == other.value
+        else:
+            return abs(self.value / self.scale - float(other)) < .5 / self.scale
+
+    def __ne__(self, other: Any) -> bool:
+        return not (self == other) # I wonder why this is so lax, compared to __equ__
+        # and I wonder it this makes objects being equal and not equal at the same time ...
+
+    def __le__(self, other: 'FixedPoint') -> bool:
+        return self.value / self.scale <= float(other)
+
+    def __lt__(self, other: 'FixedPoint') -> bool:
+        return self.value / self.scale < float(other)
+
+    def __ge__(self, other: 'FixedPoint') -> bool:
+        return self.value / self.scale >= float(other)
+
+    def __gt__(self, other: 'FixedPoint') -> bool:
+        return self.value / self.scale > float(other)
+
+    def __hash__(self) -> int:
+        """from the Python doc section 4.4.4 for implementing a hash for a two part numeric type"""
+        P = sys.hash_info.modulus
+        m, n = self.value, self.scale
+        # Remove common factors of P; unnecessary if m and n already coprime.
+        while m % P == n % P == 0:
+            m, n = m // P, n // P # now m and n are coprimes (at least one is a prime and the other is not a factor of it)
+
+        if n % P == 0:
+            hash_ = sys.hash_info.inf
+        else:
+            # Fermat's Little Theorem: pow(n, P-1, P) is 1, so
+            # pow(n, P-2, P) gives the inverse of n modulo P.
+            hash_ = (abs(m) % P) * pow(n, P - 2, P) % P
+        if m < 0:
+            hash_ = -hash_
+        if hash_ == -1:
+            hash_ = -2
+        return hash_
+
+    def round_to(self, new_scale: int) -> 'FixedPoint':
+        f = new_scale / self.scale
+        return FixedPoint(int(self.value * f + .5), scale=new_scale)
+
+fixed_point_number = FixedPoint(value=99, scale=100)
+print(fixed_point_number)
+
+other_fixed_point_number = FixedPoint(value=990, scale=1000)
+print(other_fixed_point_number)
+
+# since we have implemented __eq__ in that way and allowed those numbers to have the same hash value,
+# this should result in "True", but it doesn't, which is confusing
+print(fixed_point_number is other_fixed_point_number)
+
+
+# attributes of a function
+def f():
+    "docstring of f, accessed by f.__doc__"
+    pass
+
+print(f.__name__)
+print(f.__doc__)
+print(f.__module__)
+print(f.__qualname__)
+
+
+# staticmethod decorator
+class Angle(float):
+    __slots__ = ("_degrees",)
+
+    @staticmethod
+    def from_radians(value: float) -> "Angle":
+        return Angle(180 * value / math.pi)
+
+    def __init__(self, degrees: float) -> None:
+        self._degrees = degrees
+
+    @property
+    def radians(self) -> float:
+        return math.pi * self._degrees / 180
+
+    @property
+    def degrees(self) -> float:
+        return self._degrees
+
+a = Angle(22.5)
+print(round(a.radians/math.pi, 3))
+
+b = Angle.from_radians(.227)
+print(round(b.degrees, 1))
+
+b.radians
+
+try:
+    b.radians = 60
+except AttributeError as e:
+    print(e)
