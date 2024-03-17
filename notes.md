@@ -118,7 +118,7 @@ A non-data descriptor only implements `__get__`, a data descriptor implements `_
 - can implement both methods and attributes, but should be used for attributes only to avoid confusion (also, methods added by decorators cannot be overwritten or extended within the class or in a classes' subclass)
 - are applied to the class after the mro (method resolution order) has been done when building the class
 
-- `@dataclass`: can be used to implement additional default methods, this class gets another parent than `type`, because it has a different `metaclass` (probably deriving from `type` but being able to do more). The default `@dataclass` implements `__eq__`, `__gt__`, etc. for instance. There are also more specifications available, for instance `@dataclass(frozen=True)` makes the class immutable.
+- `@dataclass`: can be used to implement additional default methods, this class has another parent than `type`, because it has a different `metaclass` (probably deriving from `type` but being able to do more). The default `@dataclass` implements `__init__`, `__str__`, `__repr__`, `__eq__,` `__gt__`, `__ne__,`, `__hash__`, etc. There are also more specifications available, for instance `@dataclass(frozen=True)` makes the class immutable.
 - `@functools.total_ordering`: creates the missing comparison methods after only implementing two of them: `__eq__` and any method evaluating to <, >, <=, >=; the other methods will automatically be generated and will be available
 
 ### method decorators
