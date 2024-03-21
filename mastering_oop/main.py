@@ -5,6 +5,7 @@ import random
 import numbers
 import math
 from collections import Counter
+from pathlib import Path
 
 from mastering_oop.cards.card_polymorphic import (
     Card,
@@ -986,3 +987,22 @@ try:
     b.radians = 60
 except AttributeError as e:
     print(e)
+
+
+def location_list(config_name: str = "someapp.config") -> List[Path]:
+    """Find locations of configuration files."""
+    config_locations = (
+        Path(__file__),
+        # Path("~someapp").expanduser(), if a special username
+        Path("/opt") / "someapp",
+        Path("/etc") / "someapp",
+        Path.home(),
+        Path.cwd(),
+    )
+    candidates = (dir / config_name for dir in config_locations)
+    config_paths = [path for path in candidates if path.exists()]
+    return config_paths
+
+print(location_list("code"))
+print(location_list("docker"))
+print(location_list("Python"))
