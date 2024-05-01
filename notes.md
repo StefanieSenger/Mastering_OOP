@@ -105,7 +105,7 @@ A non-data descriptor only implements `__get__`, a data descriptor implements `_
 
 `Counter` - dict subclass used for counting objects; represents multiple occurrences of a value with an integer count; relies on the data structure `bag` (also called `multiset`); used as a frequency table; also implements set-like comparison operators like union or intersection
 
-`NamedTuple` - tuple subclass with named attributes that contain immutable objects; expects a number of class level attributes (typically with type hints); it has a `__setattr__` method that prevents attributes from being set; a subclass can't add any new attributes, but it can add methods (not so sure how it differs with `Enum`)
+`NamedTuple` - tuple subclass with named attributes that contain immutable objects; expects a number of class level attributes (typically with type hints); it has a `__setattr__` method that prevents attributes from being set; a subclass can't add any new attributes, but it can add methods (not so sure how it differs from `Enum`)
 
 `Enum` - used to build a unique set of constant values; values can be iterated over and compared for equality; useful working with a fixed set of choices; expects a number of class level attributes (not so sure how it differs with `NamedTuple`)
 
