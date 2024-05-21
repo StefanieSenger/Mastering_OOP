@@ -11,7 +11,7 @@ def debug(function: F) -> F:
     """function decorator that adds logging before and after a function call"""
 
     @functools.wraps(function) # allows us to forward the correct function.__name__ and function.__doc__ as attributes of the result function
-    def logged_function(*args, **kw): # gets funcion's args and kwargs somehow
+    def logged_function(*args, **kw): # gets function's args and kwargs somehow
         logging.debug("%s(%r, %r)", function.__name__, args, kw)
         result = function(*args, **kw)
         logging.debug("%s = %r", function.__name__, result)
