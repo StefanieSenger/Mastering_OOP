@@ -1,0 +1,21 @@
+Implementation
+==============
+
+We can write restructured text documentation here.
+
+Here's a reference to a class used in this project: :class:`~mastering_oop.cards.card_factory_class.CardFactory`.
+(For some reason that I am too lazy to figure out now it's not a clickable link.)
+
+Another link using `:py:mod:`: :py:mod:`hand`
+
+Another link using `:py:class:`: :py:class:`Hand`
+
+Debug Information
+-----------------
+Just some arbitrary information about our logging classes, build by using the `..
+automodule::` directive, which extracts the docstrings from a module.
+
+..  automodule:: mastering_oop.debug.logger_metaclass_and_abc
+    :members:
+    :undoc-members:
+    :special-members:
