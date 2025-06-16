@@ -1,10 +1,11 @@
 ## Special methods
 
-This table tries to define special methods by answering the following questions:
+These notes on special methods try to define special methods by answering the following questions:
 - what base classes have this method implemented and what is the default implementation
 - when is the special method triggered
 - what is it useful for
 
+- terms is used the following:
 ```python
 class Class:
     __init__(self):
@@ -81,11 +82,29 @@ An instance of a descriptor class is a class attribute in an owner class. The de
 
 A non-data descriptor only implements `__get__`, a data descriptor implements `__get__` and `__set__` and maybe `__delete__`.
 
+For a very comprehensive example for a data descriptor see a this [Advanced OOP
+notebook](https://github.com/StefanieSenger/Playground/blob/main/advanced_oop_attribute_access.ipynb)
+(Part 3: Attribute Access, Descriptors).
+
 
 ## Build-in classes and creating custom classes
 - classes to inherit from can be found in the `typing` module or in the several `abc` modules of the different build-in class types (for instance `collections.abc`) or in other places
 -`abc`s (abstract base classes) fail to provide methods on purpose, so that the interpreter would raise, if inheriting classes don't implement them themselves. We have `abc`-decorators for classes intended to be collections in `collections`, but there are more `abc`-decorators, for instance in `numbers` for numeric types.
 - the `abc`'s source code also shows what methods need to be implemented, as does the documentation, see: [Collections Abstract Base Classes](https://docs.python.org/3.12/library/collections.abc.html#collections-abstract-base-classes)
+
+  - as an example, [Collections.abc doc
+    page](https://docs.python.org/3/library/collections.abc.html) shows that every type
+    that wants to emulate a python `Sequence` class, needs to implement `__getitem__` and
+    `__len__` as abstract methods, but also `__contains__`, `__iter__`, `__reversed__`,
+    `index`, and `count` as mixin methods
+      - the abstract methods are the minimum methods we must implement in our class for
+        it to be considered a valid subclass of `Sequence`
+      - mixin methods are provided automatically by the `abc` if the required abstract
+        methods are implemented
+  - using `collections.abc.Sequence` helps us to emulate a sequence-type class; without
+    it we would have to code the mixin methods and also register our class as a virtual
+    subclass of the python Sequence class
+
 - when we build new classes, we need to know what methods come inherited with creating the class (those might have to be overwritten), and what methods we need to add, so that the required behaviour integrates nicely into the rest of the programme, for instance, when we want to build our own `MutableSequence` class (`list` also is one), then we need to implement or overwrite all its methods
 - there are three ways to make up our own class:
   - extend: add functionality to existing collection class: `class NewClass(list)`
@@ -97,7 +116,11 @@ A non-data descriptor only implements `__get__`, a data descriptor implements `_
 
 `deque` - double ended queue; in distinction with a list, it does not provide uniform performance for any element, but favours performance in the beginning and in the end of the collection; has a `pop()` method that is very efficient
 
-`stack` - single ended queue (not sure if this is build into Python in fact)
+`stack` - single ended queue (not sure if this is build into Python --> edit: now I know
+that those data structures are not build into Python; to see a really helpful example on
+how to code a `stack` and to see it in action, see this [Advanced OOP
+notebook](https://github.com/StefanieSenger/Playground/blob/main/advanced_oop_methods_and_special_methods.ipynb)
+(Part 3: Special Methods, Sequences))
 
 `ChainMap` - chain of mappings; uses Python's principle to look for local keys first, then global ones
 
